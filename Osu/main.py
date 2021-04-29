@@ -125,17 +125,14 @@ class Note(sdl2.ext.Applicator):
 
     def update(self, x, y, notes):
         if self.wasnt_pressed:
-            for i in notes:
-                if i[1] == True:
-                    if self.index == i[0]:
-                        self.check(x, y)
-                        if not self.wasnt_pressed:
-                            return not self.wasnt_pressed
-                        break
-                    else:
-                        break
+            # for i in notes:
+                # if i[1] == True:
+                #     if self.index == i[0]:
+            self.check(x, y)
+            if not self.wasnt_pressed:
+                return not self.wasnt_pressed
         else:
-            return False
+            return "tr"
 
     def draw_circle(self):
         sp = []
@@ -175,39 +172,73 @@ class combo_sprite(sdl2.ext.Entity):
         self.sprite.position = posx, posy
 
 
+class score_process():
+    def __init__(self, world, score):
+        timer1 = Timer()
+        game = song(2, 0, 0, timer1)
+        world.add_system(game)
+        factory = sdl2.ext.SpriteFactory(sdl2.ext.SOFTWARE)
+        scor = combo_sprite(world, factory.from_surface(
+            sdl2.ext.load_image("templates/Total.png")), 90, 500)
+        combo_sp_units = combo_sprite(world, factory.from_surface(NUMBERS[0]), 500, 500)
+        combo_sp_dozens = combo_sprite(world, factory.from_surface(NUMBERS[0]), 477, 500)
+        game.combo_un = combo_sp_units
+        game.combo_doz = combo_sp_dozens
+        game.scr = scor
+        image2 = Image.new("RGB", (1, 1), (0, 0, 0))
+        image2.save("templates/pix.png")
+        game.combo = int(str(score)[:2])
+        running = True
+        while running:
+            events = sdl2.ext.get_events()
+            for event in events:
+                if event.key.keysym.sym == sdl2.SDLK_r or \
+                        event.type == sdl2.SDL_QUIT:
+                    world.delete(game.combo_doz)
+                    world.delete(game.combo_un)
+                    game.status = False
+                    running = False
+                    break
+            world.process()
+
 class game_process():
     def __init__(self, world):
         f = open("templates/lvl_1.txt").read().split("\n")
-        print(f)
-        f = [[1, 300, 100], [2, 350, 100], [3, 600, 450], [5, 400, 200], [7, 900, 500], [6, 300, 500]]
+        del f[0]
+        for i in range(len(f)):
+            f[i] = f[i].split()
+            f[i][2] = round(float(f[i][2]), 1)
+            f[i][1] = int(f[i][1])
+            f[i][0] = int(f[i][0])
         timer1 = Timer()
-        game = song(3, 0, 0, timer1)
+        game = song(2, 0, 0, timer1)
         world.add_system(game)
         factory = sdl2.ext.SpriteFactory(sdl2.ext.SOFTWARE)
-        combo_sp_units = combo_sprite(world, factory.from_surface(NUMBERS[0]), 100, 1850)
-        combo_sp_dozens = combo_sprite(world, factory.from_surface(NUMBERS[0]), 77, 1850)
+        combo_sp_units = combo_sprite(world, factory.from_surface(NUMBERS[0]), 100, 1000)
+        combo_sp_dozens = combo_sprite(world, factory.from_surface(NUMBERS[0]), 77, 1000)
         game.combo_un = combo_sp_units
         game.combo_doz = combo_sp_dozens
         image2 = Image.new("RGB", (1, 1), (0, 0, 0))
         image2.save("templates/pix.png")
         space = []
         n = 0
-
         for i in f:
-            note = Note(i[0], game.ar, n)
+            note = Note(i[2], game.ar, n)
             world.add_system(note)
             texture = sdl2.ext.load_image("templates/pix.png")
             texture2 =sdl2.ext.load_image("templates/pix.png")
             note_pic = factory.from_surface(texture)
             note_pic2 = factory.from_surface(texture)
-            note_sp = note_sprite(world, note_pic, posx=i[1], posy=i[2])
-            note_sp2 = note_sprite(world, note_pic2, posx=i[1] - 70, posy=i[2] - 70)
+            note_sp = note_sprite(world, note_pic, posx=i[0], posy=i[1])
+            note_sp2 = note_sprite(world, note_pic2, posx=i[0] - 70, posy=i[1] - 70)
             note_sp.timer = timer1
             note_sp2.timer = timer1
             note.note = note_sp
             note.note2 = note_sp2
             space.append(note)
             n += 1
+
+
 
         pg.mixer.music.play()
         pg.mixer.music.set_volume(0.1)
@@ -217,7 +248,6 @@ class game_process():
             for event in events:
                 motion = None
                 if event.type == sdl2.SDL_MOUSEBUTTONDOWN:
-                    print("meh")
                     motion = event.motion
                     active_notes = []
                     for note_ob in space:
@@ -225,12 +255,13 @@ class game_process():
                             active_notes.append([note_ob.index, note_ob.wasnt_pressed])
                             if motion:
                                 stat = note_ob.update(motion.x, motion.y, active_notes)
-                                print(game.combo, motion)
                                 if stat:
-                                    game.combo += 1
-                                    game.score += 300 + (300 * (game.combo - 1) // 10)
-                                elif not stat:
-                                    game.combo = 0
+                                    if stat == "tr":
+                                        game.combo = 0
+                                    else:
+                                        game.combo += 1
+                                        game.score += 300 + (300 * (game.combo - 1) // 10)
+
                         elif active_notes and not note_ob.is_active:
                             break
                 if event.key.keysym.sym == sdl2.SDLK_r or \
@@ -243,6 +274,18 @@ class game_process():
                     world.delete(game.combo_un)
                     game.status = False
                     pg.mixer.music.stop()
+                    running = False
+                    break
+                if int(game.timer.get_ticks()) == 40:
+                    for i in space:
+                        i.flag = False
+                        world.delete(i.note)
+                        world.delete(i.note2)
+                    world.delete(game.combo_doz)
+                    world.delete(game.combo_un)
+                    game.status = False
+                    pg.mixer.music.stop()
+                    score_process(world, game.score)
                     running = False
                     break
             world.process()
