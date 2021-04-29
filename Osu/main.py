@@ -57,7 +57,7 @@ class Timer(object):
         self.paused = False
 
     def get_ticks(self):
-        return round((sdl2.timer.SDL_GetTicks() - self.startTicks) / 1000, 1)
+        return round((sdl2.timer.SDL_GetTicks() - self.startTicks) / 1000, 2)
 
 
 class Note(sdl2.ext.Applicator):
@@ -83,21 +83,34 @@ class Note(sdl2.ext.Applicator):
             self.ar = (self.note.timer.get_ticks() + 1) - self.time
             self.wasnt_pressed = False
 
+    def animation(self):
+        if self.time + round(self.ar * 0.25, 2) == self.note.timer.get_ticks() and self.f[0]:
+            self.note2.sprite.surface = sdl2.ext.load_image(self.circle_im[2])
+            self.note2.sprite.x += 17
+            self.note2.sprite.y += 17
+            self.f[0] = False
+        if self.time + round(self.ar * 0.5, 2) == self.note.timer.get_ticks() and self.f[1]:
+            self.note2.sprite.surface = sdl2.ext.load_image(self.circle_im[3])
+            self.note2.sprite.x += 18
+            self.note2.sprite.y += 18
+            self.f[1] = False
+        if self.time + round(self.ar * 0.75, 2) == self.note.timer.get_ticks() and self.f[2]:
+            self.note2.sprite.surface = sdl2.ext.load_image(self.circle_im[4])
+            self.note2.sprite.x += 17
+            self.note2.sprite.y += 17
+            self.f[2] = False
+        if self.time + self.ar == self.note.timer.get_ticks() and self.f[3]:
+            self.note2.world.delete(self.note2)
+            self.f[3] = False
+
     def process(self, world, componentsets):
         if self.flag:
             if self.time == self.note.timer.get_ticks() and not self.is_active:
                 self.is_active = True
                 self.note.sprite.surface = sdl2.ext.load_image(self.circle_im[0])
                 self.note2.sprite.surface = sdl2.ext.load_image(self.circle_im[1])
-            for i in range(1, 4):
-                if self.time + self.ar * (0.25 * i) == self.note.timer.get_ticks() and self.f[i - 1]:
-                    print(i)
-                    self.note2.sprite.surface = sdl2.ext.load_image(self.circle_im[i + 1])
-                    self.note2.sprite.x += 70 // (i + 1)
-                    self.note2.sprite.y += 70 // (i + 1)
-                    self.f[i - 1] = False
-            if self.time + self.ar == self.note.timer.get_ticks():
-                self.note2.world.delete(self.note2)
+            self.animation()
+            if self.time + self.ar + 0.5 == self.note.timer.get_ticks():
                 if self.wasnt_pressed:
                     self.ar += 1
                     self.wasnt_pressed = False
@@ -164,7 +177,8 @@ class combo_sprite(sdl2.ext.Entity):
 
 class game_process():
     def __init__(self, world):
-        # f = map(open("map.txt").read().split(), int)
+        f = open("templates/lvl_1.txt").read().split("\n")
+        print(f)
         f = [[1, 300, 100], [2, 350, 100], [3, 600, 450], [5, 400, 200], [7, 900, 500], [6, 300, 500]]
         timer1 = Timer()
         game = song(3, 0, 0, timer1)
